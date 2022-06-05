@@ -1,0 +1,45 @@
+name: 'Build Service'
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+
+jobs:
+
+  build-service:
+    name: 'Build ${{ inputs.service }}'
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: 'Checkout source code'
+        uses: 'actions/checkout@v3'
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        uses: PaulHatch/semantic-version@v5.0.0-alpha2
+        with:
+          change_path: ${{ inputs.service }}
+          namespace: ${{ inputs.service }}
+
+      - name: Set version
+        run: |
+          cd ${{ inputs.service }} && npm version ${{ steps.version.outputs.version }}
+
+      - name: Commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '${{ inputs.service }}/package.json'
+          pathspec_error_handling: exitImmediately
+          push: false
+
+      - name: Tag and push
+        run: |
+          git pull --rebase
+          git tag ${{ steps.version.outputs.version_tag }}
+          git push --atomic
+          git push --tags

@@ -1,0 +1,40 @@
+name: 'On Push'
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      service1_changed: ${{ steps.path-filter.outputs.service1 }}
+      service2_changed: ${{ steps.path-filter.outputs.service2 }}
+    steps:
+      - name: 'Checkout source code'
+        uses: 'actions/checkout@v3'
+      - name: 'Set path filter'
+        uses: dorny/paths-filter@v2
+        id: path-filter
+        with:
+          filters: |
+            service1:
+              - 'service1/**'
+            service2:
+              - 'service2/**'
+
+  build-service1:
+    needs: check
+    if: needs.check.outputs.service1_changed == 'true'
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: service1
+
+  build-service2:
+    needs: check
+    if: needs.check.outputs.service2_changed == 'true'
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: service2
